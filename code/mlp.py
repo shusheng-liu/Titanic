@@ -82,7 +82,7 @@ class early_stopper:
             if self.counter >= self.patience:
                 return True
             
-epochs = 30
+epochs = 50
 batch_size = 64
 validation_split = 0.2
 shuffle_dataset = True      
@@ -92,11 +92,11 @@ class MLP(nn.Module):
     def __init__(self):
         super().__init__()
         self.layers = nn.Sequential(
-            nn.Linear(6, 16),
+            nn.Linear(6, 12),
             nn.ReLU(),
-            nn.Linear(16,32),
+            nn.Linear(12,24),
             nn.ReLU(),
-            nn.Linear(32,1),
+            nn.Linear(24,1),
             nn.Sigmoid()
         )
         
@@ -125,7 +125,7 @@ def train():
     validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler)
 
     loss_func = nn.BCELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr = 0.001)
+    optimizer = torch.optim.SGD(model.parameters(), lr = 0.0001)
     
     early_stopping = early_stopper(patience=3)
     
@@ -170,7 +170,7 @@ def train():
     plt.legend()
     plt.savefig("model_loss.png")
     
-    torch.save(model.state_dict(), "data/model.pt")
+    torch.save(model.state_dict(), "model/model.pt")
     
     print("--- Finished Training ---")
 
@@ -188,10 +188,13 @@ def test():
     output = np.array(output)
     dataset = pd.DataFrame({'PassengerId': dataset.id, 'Survived': output})
     dataset.to_csv("output.csv", index = False)
+    print("Outputting predictions.")
 
+training = False
 
-train()
-
-#model = MLP()
-#model.load_state_dict(torch.load("data/model.pt"))
-#test()
+if training:
+    train()
+else:
+    model = MLP()
+    model.load_state_dict(torch.load("model/model.pt"))
+    test()
