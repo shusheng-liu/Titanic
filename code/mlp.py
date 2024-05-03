@@ -6,6 +6,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from matplotlib import pyplot as plt
 
+# Create custom class's to use pytorch's dataloader
+# Each custom class needs __init__, __len__ and __getitem__ function
 class train_data:
     
     def __init__(self):
@@ -67,6 +69,8 @@ class test_data:
         return self.id[idx], self.data[idx]
     
 class early_stopper:
+    # At each epoch, see if avg validation loss is decreasing
+    # if its the 3rd epoch, return True else false
     def __init__(self, patience = 3, min_delta = 0):  
         self.counter = 0
         self.patience = 3
@@ -82,6 +86,7 @@ class early_stopper:
             if self.counter >= self.patience:
                 return True
             
+# hyperparameters to tune            
 epochs = 50
 batch_size = 64
 validation_split = 0.2
@@ -90,6 +95,7 @@ shuffle_dataset = True
 class MLP(nn.Module):
     
     def __init__(self):
+        # use superclass init to get .parameters()
         super().__init__()
         self.layers = nn.Sequential(
             nn.Linear(6, 12),
@@ -107,7 +113,8 @@ def train():
     model = MLP()      
     training_loss = []
     testing_loss = []
-
+    
+    # split training and validation data from dataset
     dataset = train_data()
     dataset_size = len(dataset)
     indices = list(range(dataset_size))
@@ -124,9 +131,11 @@ def train():
     train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
     validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler)
 
+    # set loss as Binary Cross Entropy with SGD optimizer
     loss_func = nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr = 0.0001)
     
+    # create early stopping if validation loss does not decrease
     early_stopping = early_stopper(patience=3)
     
     for epoch in range(epochs):
@@ -135,6 +144,7 @@ def train():
         
         model.train()
         for i, data in enumerate(train_loader):
+            # forward and backward pass for one mini batch
             feature, target = data
             target = torch.unsqueeze(target, 1)
             optimizer.zero_grad()
@@ -148,6 +158,7 @@ def train():
         print(f"* Epoch: {epoch+1}, Avg training loss: {avg_training_loss:.4f} *")
         training_loss.append(avg_training_loss)
         
+        # set eval mode for validation set
         model.eval()
         with torch.no_grad():
             validation_step_loss = []
@@ -162,19 +173,24 @@ def train():
             print(f"* Epoch: {epoch+1}, Avg validation loss: {avg_validation_loss:.4f} *")
             testing_loss.append(avg_validation_loss)
             
+        # if avg validation loss of epoch does not decrease after 3 epoch, break
         if early_stopping.early_stop(avg_validation_loss):
             break
         
+    # plot training vs validation loss graph
     plt.plot(training_loss, label='train_loss')
     plt.plot(testing_loss,label='val_loss')
     plt.legend()
     plt.savefig("model_loss.png")
     
+    # save model 
     torch.save(model.state_dict(), "model/model.pt")
     
     print("--- Finished Training ---")
 
 def test():
+    
+    # set model in evaluation mode
     model.eval()
     with torch.no_grad():
         dataset = test_data()
@@ -182,14 +198,18 @@ def test():
         output = []
         for entry in test_loader:
             id, feature = entry
+            # convert tensor output to numpy 2d matrix
             temp = model.forward(feature).numpy()
             pred = np.where( temp[0][0]> 0.5, 1, 0)
             output.append(pred)
     output = np.array(output)
+    # create panda dataframe to output as csv
     dataset = pd.DataFrame({'PassengerId': dataset.id, 'Survived': output})
     dataset.to_csv("output.csv", index = False)
     print("Outputting predictions.")
 
+# if training model, set training to TRUE
+# elif testing, set training to False
 training = False
 
 if training:
