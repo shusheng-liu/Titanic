@@ -23,6 +23,7 @@ def prepare_data(csv):
     
     
 def main():
+    # prepare data and train SVM model
     svm = SVC(kernel='linear')
     csv = pd.read_csv("data/train.csv", dtype={"Survived": np.float32})
     y_train = csv["Survived"].to_numpy()
@@ -31,6 +32,7 @@ def main():
     svm.fit(x_train,y_train)
     print("Finished Training")
     
+    # predict and output to csv
     csv = pd.read_csv("data/test.csv")
     id_test = csv['PassengerId'].to_numpy()
     x_test = prepare_data(csv)
